@@ -41,3 +41,56 @@ core_weather = core_weather.fillna(method="ffill")
 
 # check the percentage of null values in each column one more time 
 print(core_weather.apply(pd.isnull).sum()/core_weather.shape[0]) 
+
+# 2. verifying the data types (the numeric types are needed!)
+
+print(core_weather.index)
+core_weather.index = pd.to_datetime(core_weather.index)
+
+# 3. remove the "9999" which indicates the missing data
+
+core_weather.apply(lambda x: (x==9999).sum())
+
+# 4. the weather data analysis
+
+core_weather[["TMAX", "TMIN"]].plot()
+core_weather[["PRCP"]].plot()
+
+# count the days in each year where there is data
+print(core_weather.index.year.value_counts().sort_index())
+
+# count the sum of rain per each year
+print(core_weather.groupby(core_weather.index.year).sum()["PRCP"])
+
+# 5. training the simple machine learning model
+
+# the aim is to predict the tomorrow's temperature
+
+# shifting the columns
+# the target for  each row is the temperature of the following day
+core_weather["target"] = core_weather.shift(-1)["TMAX"]
+print(core_weather)
+
+# delete the last row so there is no null values
+core_weather = core_weather.iloc[:-1,:].copy()
+print(core_weather)
+
+# machine learning model
+from sklearn.linear_model import Ridge
+reg = Ridge(alpha=.1)
+
+predictors = ["PRCP", "TMAX", "TMIN"]
+
+# split the data into train and test sets
+train = core_weather.loc[:"2020-12-31"]
+test = core_weather.loc["2021-01-01":]
+
+# fitting the model
+reg.fit(train[predictors], train["target"])
+predictions = reg.predict(test[predictors])
+
+# calculate the mean_absolute_error
+# which is the avarage of the difference between the actual values and the predictions
+from sklearn.metrics import mean_absolute_error
+mean_absolute_error = mean_absolute_error(test["target"], predictions)
+print(mean_absolute_error)
