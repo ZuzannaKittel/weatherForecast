@@ -94,3 +94,14 @@ predictions = reg.predict(test[predictors])
 from sklearn.metrics import mean_absolute_error
 mean_absolute_error = mean_absolute_error(test["target"], predictions)
 print(mean_absolute_error)
+
+# 6. evaluating the model 
+
+# comparing the true and predicted values
+combined = pd.concat([test["target"], pd.Series(predictions, index=test.index)], axis=1)
+combined.coluemns = ["actual", 'predictions']
+print(combined)
+print(combined.plot())
+
+# the coefficients
+print(reg.coef_)
