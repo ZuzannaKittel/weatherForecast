@@ -92,16 +92,55 @@ predictions = reg.predict(test[predictors])
 # calculate the mean_absolute_error
 # which is the avarage of the difference between the actual values and the predictions
 from sklearn.metrics import mean_absolute_error
-mean_absolute_error = mean_absolute_error(test["target"], predictions)
+error = mean_absolute_error(test["target"], predictions)
 print(mean_absolute_error)
 
 # 6. evaluating the model 
 
 # comparing the true and predicted values
 combined = pd.concat([test["target"], pd.Series(predictions, index=test.index)], axis=1)
-combined.coluemns = ["actual", 'predictions']
+combined.columns = ["actual", 'predictions']
 print(combined)
 print(combined.plot())
 
 # the coefficients
 print(reg.coef_)
+
+# 7. predictions function
+
+def create_predictions(predictors, core_weather, reg):
+    train = core_weather.loc[:"2020-12-31"]
+    test = core_weather.loc["2021-01-01":]
+    reg.fit(train[predictors], train["target"])
+    predictions = reg.predict(test[predictors])
+    error = mean_absolute_error(test["target"], predictions)
+    combined = pd.concat([test["target"], pd.Series(predictions, index=test.index)], axis=1)
+    combined.columns = ["actual", 'predictions']
+    return error, combined
+
+# 8. adding rolling means
+
+core_weather["month_max"] = core_weather['TMAX'].rolling(30).mean()
+print(core_weather)
+core_weather["month_day_max"] = core_weather["month_max"] / core_weather["TMAX"]
+core_weather["max_min"] = core_weather["TMAX"] / core_weather["TMIN"]
+predictors = ["PRCP", "TMAX", "TMIN", "month_max", "month_day_max", "max_min"]
+
+# remove the first 30 null values
+core_weather = core_weather.iloc[30:,:].copy()
+
+# create predictions with new predictors
+error, combined = create_predictions(predictors, core_weather, reg)
+print(error)
+
+# the averages of TMAX for each month (all the years) before particular observation (no future data)
+core_weather["monthly_avg"] = core_weather["TMAX"].groupby(core_weather.index.month).apply(lambda x: x.expanding(1).mean())
+print(core_weather)
+
+# the avarage of TMAX of previous 30 days for particular observation
+core_weather["day_of_year_avg"] = core_weather["TMAX"].groupby(core_weather.index.day_of_year).apply(lambda x: x.expanding(1).mean())
+predictors = ["PRCP", "TMAX", "TMIN", "month_max", "month_day_max", "max_min", "day_of_year_avg", "monthly_avg"]
+
+# create predictions with new predictors
+error, combined = create_predictions(predictors, core_weather, reg)
+print(error)
