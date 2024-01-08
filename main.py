@@ -144,3 +144,15 @@ predictors = ["PRCP", "TMAX", "TMIN", "month_max", "month_day_max", "max_min", "
 # create predictions with new predictors
 error, combined = create_predictions(predictors, core_weather, reg)
 print(error)
+
+# 9. running model diagnostics 
+
+# the coefficients
+print(reg.coef_)
+
+# corelations between target and predictors
+print(core_weather.corr()["target"])
+
+# differences between actual and predicted values
+combined["diff"] = (combined["actual"] - combined["predictions"]).abs()
+print(combined.sort_values("diff", ascending=False).head())
